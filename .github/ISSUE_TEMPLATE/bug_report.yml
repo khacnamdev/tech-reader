@@ -1,0 +1,76 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve the template or project.
+title: "bug: [Short description of the bug]"
+labels: ["type: bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the form below as accurately as possible to help us reproduce and resolve the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a clear and concise description of what the bug is.
+      placeholder: E.g., The app crashes on startup when JWT secret is empty.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Outline the steps to reproduce the bug.
+      placeholder: |
+        1. Run 'pnpm install'
+        2. Execute 'pnpm run dev'
+        3. Navigate to http://localhost:3000/invalid-route
+        4. See error console output
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear description of what you expected to happen.
+      placeholder: E.g., The app should redirect to a 404 page rather than crash.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: Describe what actually happened.
+      placeholder: E.g., The app crashed with an unhandled exception.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Info
+      description: Provide relevant version details.
+      value: |
+        - OS: [e.g. macOS Sonoma, Ubuntu 22.04]
+        - Node Version: [e.g. 20.15.0]
+        - Package Manager & Version: [e.g. pnpm 9.5.0]
+        - Library/Framework Version: [e.g. Next.js 14.2.0, NestJS 10.3.0]
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Error Output
+      description: Paste any relevant terminal logs, build failures, or browser console errors here.
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Videos
+      description: If applicable, add screenshots or screen recordings to help explain the problem.

@@ -1,0 +1,78 @@
+name: Production Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Production Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Build
+        run: pnpm run build
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The following steps are placeholders to extend for Web (NextJS / React / Express) and Mobile (React Native) deployment
+      # ==========================================
+      # WEB DEPLOYMENT EXAMPLES (e.g. AWS, Vercel, Docker)
+      # ==========================================
+      # - name: Deploy Frontend to Vercel
+      #   run: |
+      #     echo "Deploying to Vercel..."
+      #     # npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+      #
+      # - name: Build and Push Docker Image
+      #   run: |
+      #     echo "Building Docker container for server..."
+      #     # docker build -t my-app:${{ github.ref_name }} .
+      #     # docker push my-app:${{ github.ref_name }}
+
+      # ==========================================
+      # MOBILE DEPLOYMENT EXAMPLES (React Native / Expo)
+      # ==========================================
+      # - name: Deploy Mobile via Expo EAS
+      #   run: |
+      #     echo "Deploying React Native app using EAS Build..."
+      #     # pnpm dlx eas-cli build --platform all --profile production --non-interactive
+      #
+      # - name: Deploy Mobile via Fastlane (iOS/Android)
+      #   run: |
+      #     echo "Deploying native builds using Fastlane..."
+      #     # bundle exec fastlane ios release
+      #     # bundle exec fastlane android release

@@ -1,0 +1,17 @@
+# CODEOWNERS file is used to define who is responsible for code reviews in this repository.
+# Details: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything (unless overridden by specific patterns)
+*       @my-org/core-team
+
+# CI/CD Workflows
+/.github/workflows/   @my-org/devops-team
+
+# Repository configurations
+/eslint.config.js     @my-org/core-team
+/.prettierrc          @my-org/core-team
+/package.json         @my-org/core-team
+
+# AI/Agent configurations
+/.agent/              @my-org/ai-team
+/AGENTS.md            @my-org/ai-team

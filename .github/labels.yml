@@ -1,0 +1,47 @@
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working as expected"
+
+- name: "type: feature"
+  color: "a2eeef"
+  description: "New feature or capability request"
+
+- name: "type: documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type: refactor"
+  color: "7f52ff"
+  description: "Code change that neither fixes a bug nor adds a feature"
+
+- name: "type: performance"
+  color: "85e89d"
+  description: "Code change that improves performance"
+
+- name: "type: security"
+  color: "e00000"
+  description: "Security vulnerability fix or configuration"
+
+- name: "scope: ci-cd"
+  color: "5319e7"
+  description: "Work related to CI/CD workflows, automation, or GitHub Actions"
+
+- name: "scope: deps"
+  color: "0366d6"
+  description: "Dependency updates or configuration"
+
+- name: "status: review-required"
+  color: "fbca04"
+  description: "Ready for review by maintainers"
+
+- name: "status: in-progress"
+  color: "fef2c0"
+  description: "Active development currently in progress"
+
+- name: "priority: critical"
+  color: "b60205"
+  description: "Needs immediate attention; blocking releases or development"
+
+- name: "priority: high"
+  color: "d93f0b"
+  description: "High priority item to address soon"

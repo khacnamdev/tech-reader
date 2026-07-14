@@ -1,0 +1,43 @@
+name: ✨ Feature Request
+description: Propose a new feature, enhancement, or capability.
+title: "feat: [Short description of the feature]"
+labels: ["type: feature"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We appreciate your feedback and suggestions! Use this template to request new features or improvements.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is.
+      placeholder: E.g., I'm frustrated when I try to configure X because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: E.g., Add a built-in workflow for Y to automate...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+      placeholder: E.g., I tried to use Z but it didn't work because...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context or screenshots about the feature request here.

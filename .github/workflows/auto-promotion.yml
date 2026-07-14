@@ -1,0 +1,60 @@
+name: Environment Promotion
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+
+jobs:
+  promote:
+    name: Auto Promote Environment
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Promote develop to staging
+        if: github.ref == 'refs/heads/develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Detect changes in develop. Promoting to staging..."
+          # Check if PR already exists
+          PR_EXISTS=$(gh pr list --base staging --head develop --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$PR_EXISTS" ]; then
+            gh pr create \
+              --base staging \
+              --head develop \
+              --title "chore(release): promote develop to staging" \
+              --body "### Environment Promotion
+              This is an automated pull request promoting changes from \`develop\` to \`staging\`.
+              
+              Please verify all CI checks pass before merging."
+          else
+            echo "Promotion PR from develop to staging already exists: PR #$PR_EXISTS"
+          fi
+
+      - name: Promote staging to main
+        if: github.ref == 'refs/heads/staging'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Detect changes in staging. Promoting to main..."
+          # Check if PR already exists
+          PR_EXISTS=$(gh pr list --base main --head staging --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -z "$PR_EXISTS" ]; then
+            gh pr create \
+              --base main \
+              --head staging \
+              --title "chore(release): promote staging to main" \
+              --body "### Environment Promotion
+              This is an automated pull request promoting changes from \`staging\` to \`main\` for production release.
+              
+              Ensure staging testing is fully validated before merging."
+          else
+            echo "Promotion PR from staging to main already exists: PR #$PR_EXISTS"
+          fi

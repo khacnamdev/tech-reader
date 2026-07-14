@@ -1,0 +1,46 @@
+{
+  "name": "engineering-template",
+  "version": "1.0.0",
+  "description": "Production-grade repository template for JS/TS projects",
+  "private": true,
+  "packageManager": "pnpm@9.5.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "echo \"Implement dev server script according to project type (e.g. Next.js, NestJS, Express)\" && exit 0",
+    "build": "tsc --noEmit",
+    "start": "echo \"Implement start script according to project type\" && exit 0",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,yml,yaml}\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "keywords": [
+    "template",
+    "github-template",
+    "typescript",
+    "ci-cd",
+    "eslint",
+    "prettier",
+    "pnpm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.6.0",
+    "@types/node": "^20.14.9",
+    "eslint": "^9.6.0",
+    "globals": "^15.8.0",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.2",
+    "typescript-eslint": "^7.15.0",
+    "vitest": "^1.6.0"
+  }
+}
