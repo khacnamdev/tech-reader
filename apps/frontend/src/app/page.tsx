@@ -14,7 +14,6 @@ export default function Home() {
     if (!url.trim()) return;
 
     setStatus("crawling");
-    setErrorMessage("");
 
     try {
       // API integration target: POST /api/v1/articles/ingest
