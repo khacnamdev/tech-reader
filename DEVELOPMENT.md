@@ -21,42 +21,56 @@ Before starting development, ensure you have the following tools installed on yo
 
 ## 🚀 Getting Started
 
-### 1. Initialize the Environment
-We provide a helper script to automate copying environment templates, verifying engines, and setting up workspace options:
+### 1. Configure the Environment
+Ensure your local PostgreSQL database is running. Create your local configurations file:
 ```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
+cp .env.example .env
 ```
 
 ### 2. Install Dependencies
-Install packages with frozen lockfile parameters to prevent changes to your dependency trees:
+Run from the root of the workspace:
 ```bash
 pnpm install
 ```
 
-### 3. Verify Local Checks
-Ensure your environment is configured correctly by running the verification suite:
+### 3. Run Database Migrations
+Generate database tables and synchronize database types matching the Prisma schema:
 ```bash
-pnpm run lint
+pnpm --filter backend exec prisma db push
+```
+
+### 4. Verify Local Builds & Linting
+Ensure type safety and quality standards pass:
+```bash
+# Check TypeScript across the whole monorepo
 pnpm run typecheck
+
+# Run linters
+pnpm run lint
+
+# Run unit tests (Vitest)
 pnpm run test
-pnpm run build
 ```
 
 ---
 
-## 🛠️ Development Scripts
+## 🛠️ Monorepo Development Scripts
 
-Use these standard scripts during feature development:
+We leverage `pnpm` workspace filters to run commands targeting specific modules:
 
-- `pnpm run dev`: Launch the dev server (adjust script inside [package.json](file:///package.json) once a specific framework is adopted).
-- `pnpm run lint`: Analyzes codebase with ESLint rules.
-- `pnpm run lint:fix`: Automatically repairs autofixable linting issues.
-- `pnpm run format`: Applies Prettier code-formatting layout across JS/TS/MD/YAML files.
-- `pnpm run format:check`: Validates formatting standards without applying changes (used in CI).
-- `pnpm run typecheck`: Validates TypeScript strict typing structures.
-- `pnpm run test`: Executes unit and integration test suites using Vitest.
-- `pnpm run build`: Compiles production assets.
+*   **Launch Development Servers**:
+    *   Backend (NestJS API on port 3001): `pnpm --filter backend start:dev`
+    *   Frontend (Next.js App on port 3000): `pnpm --filter frontend dev`
+*   **Database Management**:
+    *   Generate client code: `pnpm --filter backend exec prisma generate`
+    *   Open Prisma Studio dashboard: `pnpm --filter backend exec prisma studio`
+*   **Formatting and Styling**:
+    *   Run Prettier format fix: `pnpm run format`
+    *   Check format standards: `pnpm run format:check`
+*   **Testing and Type Checks**:
+    *   Check static types: `pnpm run typecheck`
+    *   Run test suite (Vitest): `pnpm run test`
+    *   Compile production builds: `pnpm run build`
 
 ---
 

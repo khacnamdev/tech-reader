@@ -1,0 +1,317 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  name              String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Relations
+  preferences       UserPreference?
+  articles          Article[]
+  notes             Note[]
+  highlights        Highlight[]
+  folders           Folder[]
+  collections       Collection[]
+  searchHistories   SearchHistory[]
+  statistics        LearningStatistic?
+  readingHistory    ReadingHistory[]
+  aiChats           AIChat[]
+
+  @@map("users")
+}
+
+model UserPreference {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetLanguage String   @default("VI") // Language to translate into (e.g. "VI", "JA", "ES")
+  theme          String   @default("DARK") // "DARK" | "LIGHT" | "SYSTEM"
+  fontSize       Int      @default(16)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+model Article {
+  id                   String           @id @default(uuid())
+  userId               String
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                String
+  slug                 String
+  sourceUrl            String?
+  sourceDomain         String?
+  author               String?
+  publishedAt          DateTime?
+  rawHtml              String?          @db.Text
+  cleanMarkdown        String           @db.Text
+  translationMarkdown  String           @db.Text
+  summary              String           @db.Text
+  difficulty           Difficulty       @default(INTERMEDIATE)
+  estimatedReadingTime Int              @default(0) // in minutes
+  categoryName         String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  // Relations
+  tags                 Tag[]
+  keyPoints            KeyPoint[]
+  vocabularies         Vocabulary[]
+  technicalTerms       TechnicalTerm[]
+  notes                Note[]
+  highlights           Highlight[]
+  readingProgress      ReadingProgress?
+  readingHistory       ReadingHistory[]
+  folderId             String?
+  folder               Folder?          @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  collections          Collection[]
+  chunks               ArticleChunk[]
+  sourceRelations      ArticleRelation[] @relation("SourceArticle")
+  targetRelations      ArticleRelation[] @relation("TargetArticle")
+
+  @@unique([userId, slug])
+  @@index([userId])
+  @@index([categoryName])
+  @@map("articles")
+}
+
+model ArticleChunk {
+  id         String                 @id @default(uuid())
+  articleId  String
+  article    Article                @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  content    String                 @db.Text
+  chunkIndex Int
+  embedding  Unsupported("vector")? // pgvector type (e.g. vector(1536))
+  createdAt  DateTime               @default(now())
+
+  @@index([articleId])
+  @@map("article_chunks")
+}
+
+model KeyPoint {
+  id        String   @id @default(uuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  point     String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("key_points")
+}
+
+model Vocabulary {
+  id              String     @id @default(uuid())
+  articleId       String
+  article         Article    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  word            String
+  definition      String     @db.Text // English meaning
+  meaning         String     @db.Text // Translated language meaning
+  pronunciation   String?
+  exampleSentence String     @db.Text
+  whenToUse       String?    @db.Text
+  difficulty      Difficulty @default(BEGINNER)
+  isMastered      Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([articleId])
+  @@index([word])
+  @@map("vocabularies")
+}
+
+model TechnicalTerm {
+  id                String    @id @default(uuid())
+  articleId         String
+  article           Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  term              String
+  definition        String    @db.Text
+  whyItExists       String?   @db.Text
+  howItWorks        String?   @db.Text
+  architectureDesc  String?   @db.Text
+  advantages        String[]
+  disadvantages     String[]
+  realWorldExamples String[]
+  relatedTech       String[]
+  bestPractices     String[]
+  commonMistakes    String[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([articleId])
+  @@index([term])
+  @@map("technical_terms")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([articleId])
+  @@map("notes")
+}
+
+model Highlight {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId      String
+  article        Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  serializedDom  String?  @db.Text // Selection offset indices or DOM path pointer
+  selectedText   String   @db.Text
+  color          String   @default("yellow")
+  noteContent    String?  @db.Text // Optional contextual text attached to the highlight
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([articleId])
+  @@map("highlights")
+}
+
+model Folder {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  articles  Article[]
+
+  @@unique([userId, name])
+  @@map("folders")
+}
+
+model Collection {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  articles  Article[]
+
+  @@unique([userId, name])
+  @@map("collections")
+}
+
+model ReadingProgress {
+  id              String   @id @default(uuid())
+  articleId       String   @unique
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  scrollPercentage Float    @default(0.0)
+  lastReadAt      DateTime @default(now())
+  isCompleted     Boolean  @default(false)
+
+  @@map("reading_progress")
+}
+
+model ReadingHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("reading_histories")
+}
+
+model AIChat {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String       @default("New Conversation")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  messages  AIChatMessage[]
+
+  @@index([userId])
+  @@map("ai_chats")
+}
+
+model AIChatMessage {
+  id        String   @id @default(uuid())
+  chatId    String
+  chat      AIChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String   // "user" | "assistant" | "system"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([chatId])
+  @@map("ai_chat_messages")
+}
+
+model ArticleRelation {
+  id               String   @id @default(uuid())
+  sourceArticleId  String
+  sourceArticle    Article  @relation("SourceArticle", fields: [sourceArticleId], references: [id], onDelete: Cascade)
+  targetArticleId  String
+  targetArticle    Article  @relation("TargetArticle", fields: [targetArticleId], references: [id], onDelete: Cascade)
+  similarityScore  Float
+  relationshipType String   @default("similar")
+  createdAt        DateTime @default(now())
+
+  @@unique([sourceArticleId, targetArticleId])
+  @@map("article_relations")
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  articles  Article[]
+
+  @@map("tags")
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  searchType String   @default("hybrid") // "keyword" | "semantic" | "hybrid"
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("search_histories")
+}
+
+model LearningStatistic {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articlesRead     Int      @default(0)
+  totalReadingTime Int      @default(0) // in minutes
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastReadDate     DateTime?
+  updatedAt        DateTime @updatedAt
+
+  @@map("learning_statistics")
+}

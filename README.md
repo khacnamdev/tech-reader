@@ -1,52 +1,34 @@
-# Engineering Template
+# AI Tech Reader (Second Brain for Developers)
 
-A production-grade, highly reusable GitHub Repository Template designed as a baseline configuration for modern JavaScript and TypeScript applications.
+A digital technical reading assistant and knowledge management platform designed for software engineers. It helps developers understand English articles faster, preserve technical terminology, extract vocabulary and concepts, and build a long-term technical knowledge base.
 
-## 🚀 Purpose
+## 🚀 Purpose & Vision
 
-This repository standardizes and streamlines bootstrapping for multiple JavaScript/TypeScript stacks:
-- **React Native** (Mobile application development)
-- **React** (Single Page Applications)
-- **Next.js** (Full-stack SSR web applications)
-- **NestJS** (Enterprise-grade backend APIs)
-- **Node.js** & **Express.js** (Microservices and REST APIs)
-
-It is pre-configured with industry-standard tooling, CI/CD pipelines, documentation templates, developer guidelines, and AI agent instructions.
+AI Tech Reader is not just an AI translator—it's a developer second brain. 
+It automates:
+1. **Ingestion**: Crawling articles, cleaning HTML layout noise, and parsing to Markdown.
+2. **Translation**: Translating prose to target languages while conserving specialized English terms (e.g. *Suspense*, *Fiber*, *Hydration*, *AST*) with interactive glossaries.
+3. **Knowledge Extraction**: Synthesizing key takeaways, vocabulary words (with IPA pronunciation, definitions, and examples), and technical concepts.
+4. **Retrieval (RAG)**: Enabling semantic library search and interactive chat across saved insights using `pgvector`.
 
 ---
 
 ## 📦 Directory Structure
 
 ```text
-├── .github/                 # GitHub specific configurations
-│   ├── workflows/           # CI/CD, branch protection, promotion workflows
-│   ├── ISSUE_TEMPLATE/      # Structured issue forms (bugs, features)
-│   ├── CODEOWNERS           # Reviews assignments
-│   ├── dependabot.yml       # Weekly dependency updates schedules
-│   └── PULL_REQUEST_TEMPLATE.md
+├── apps/
+│   ├── frontend/            # Next.js 19 App Router Web Dashboard
+│   │   ├── src/app/         # Routing pages (Landing, Dashboard, Articles Viewer)
+│   │   └── src/components/  # React components & Providers
+│   │
+│   └── backend/             # NestJS Enterprise API Gateway & Workers
+│       ├── prisma/          # Schema migrations & database definitions (pgvector)
+│       └── src/             # Nest modules (Articles ingestion, RAG Chat session, Auth)
 │
+├── .github/                 # GitHub specific configurations (workflows, PR templates)
 ├── .agent/                  # AI Development Guidelines & Workflows
-│   ├── rules/               # Architecture and coding rules
-│   ├── skills/              # Prompts/tasks for debugging, code reviews
-│   └── workflows/           # Standard checklists for bug fixes and features
-│
 ├── docs/                    # Extensive technical documentation
-│   ├── architecture/        # High-level architecture and system design
-│   ├── decisions/           # Architecture Decision Records (ADRs)
-│   ├── deployment/          # Guides on deployment patterns (Web & Mobile)
-│   └── troubleshooting/     # Runbooks and common issues resolutions
-│
-├── scripts/                 # Automation scripts (setup, release prep)
-│   ├── setup.sh
-│   └── release.sh
-│
-├── .editorconfig            # Editor layout configuration
-├── .gitignore               # Multi-framework exclusions
-├── .nvmrc                   # Project target Node version
-├── .prettierrc              # Custom prettier config
-├── eslint.config.js         # ESLint Flat configuration
-├── .env.example             # Base configuration environment template
-│
+├── scripts/                 # Automation scripts
 ├── AGENTS.md                # How to leverage AI Agents with this repo
 ├── DEVELOPMENT.md           # Instructions on local development setup
 ├── CONTRIBUTING.md          # Branching, commits, and review processes
@@ -69,23 +51,36 @@ It is pre-configured with industry-standard tooling, CI/CD pipelines, documentat
 
 ---
 
-## 🎯 How to Use This Template
+## 🎯 Quick Start Guide
 
-### 1. Instantiate the Repository
-Click the **"Use this template"** button at the top of the GitHub page. Select **"Create a new repository"**, set your new repository name, and clone it.
-
-### 2. Run the Setup Script
-Run the automated environment setup script to configure local files, git settings, and verify system dependencies:
+### 1. Install Workspace Packages
+Resolve all dependency trees across both packages:
 ```bash
-chmod +x scripts/setup.sh
-./scripts/setup.sh
+pnpm install
 ```
 
-### 3. Initialize Your Chosen Stack
-After instantiating this template, clean up or modify configuration folders depending on the specific stack you are building:
-- **NestJS/Express**: Initialize your source files inside `src/`.
-- **Next.js/React**: Clean workspace and run your framework setup (`pnpm dlx create-next-app@latest .`).
-- **React Native**: Set up your React Native structure (or run `npx react-native@latest init`). Make sure to restore the `.github/` and `.agent/` folders to your root directory.
+### 2. Configure Local Settings
+Set up the environment variables pointing to your database and OpenAI keys:
+```bash
+# Copy example
+cp .env.example .env
+```
+
+### 3. Setup Database & pgvector
+Make sure your PostgreSQL instance is running. Run the schema sync command:
+```bash
+pnpm --filter backend exec prisma db push
+```
+
+### 4. Run Development Servers
+Launch both applications inside local workspaces:
+```bash
+# Launches NestJS Backend API at http://localhost:3001
+pnpm --filter backend start:dev
+
+# Launches Next.js Web App Dashboard at http://localhost:3000
+pnpm --filter frontend dev
+```
 
 ---
 

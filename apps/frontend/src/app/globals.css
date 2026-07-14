@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+:root {
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+
+  --card: 224 71% 7%;
+  --card-foreground: 210 20% 98%;
+
+  --popover: 224 71% 6%;
+  --popover-foreground: 210 20% 98%;
+
+  --primary: 263 70% 50%;
+  --primary-foreground: 210 20% 98%;
+
+  --secondary: 224 71% 12%;
+  --secondary-foreground: 210 20% 98%;
+
+  --muted: 224 71% 12%;
+  --muted-foreground: 217.2 32.6% 75%;
+
+  --accent: 190 90% 50%;
+  --accent-foreground: 224 71% 4%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 20% 98%;
+
+  --border: 224 71% 12%;
+  --input: 224 71% 12%;
+  --ring: 263 70% 50%;
+
+  --radius: 0.75rem;
+}
+
+body {
+  background-color: hsl(224 71% 4%);
+  color: hsl(210 20% 98%);
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Custom visual polish */
+.glass-panel {
+  background: rgba(8, 12, 28, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #a78bfa, #c7d2fe, #22d3ee);
+}
+
+/* Tooltip definitions for interactive terms */
+.tech-term-highlight {
+  border-bottom: 2px dashed #22d3ee;
+  cursor: help;
+  transition: background-color 0.2s;
+}
+.tech-term-highlight:hover {
+  background-color: rgba(34, 211, 238, 0.1);
+}
+
+.vocab-highlight {
+  border-bottom: 2px dashed #a78bfa;
+  cursor: help;
+  transition: background-color 0.2s;
+}
+.vocab-highlight:hover {
+  background-color: rgba(167, 139, 250, 0.1);
+}
+
+/* Webkit scrollbar stylings */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(8, 12, 28, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
