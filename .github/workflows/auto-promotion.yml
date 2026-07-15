@@ -15,7 +15,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Promote develop to staging
         if: github.ref == 'refs/heads/develop'
