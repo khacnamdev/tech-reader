@@ -17,7 +17,7 @@ export class VectorService {
   private openai: OpenAI;
 
   constructor(private readonly db: DatabaseService) {
-    const apiKey = process.env.OPENAI_API_KEY || "placeholder-key";
+    const apiKey = process.env.OPENAI_API_KEY;
     this.openai = new OpenAI({ apiKey });
   }
 
@@ -26,8 +26,7 @@ export class VectorService {
    */
   async generateEmbedding(text: string): Promise<number[]> {
     if (!process.env.OPENAI_API_KEY) {
-      this.logger.warn("OPENAI_API_KEY is not configured. Returning dummy zero-vector.");
-      return new Array(1536).fill(0);
+      throw new Error("OPENAI_API_KEY environment variable is not configured. Vector embedding generation is unavailable.");
     }
 
     try {

@@ -1,86 +1,187 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   BookOpen, Brain, Calendar, Clock, Flame, 
   Plus, CheckCircle2, ChevronRight, BarChart3, ArrowUpRight
 } from "lucide-react";
 
+interface DashboardData {
+  userName: string;
+  stats: {
+    articlesRead: number;
+    readingTime: number;
+    streak: number;
+    vocabularyCount: number;
+    conceptsCount: number;
+  };
+  categories: Array<{ name: string; count: number }>;
+  recentArticles: Array<{
+    id: string;
+    title: string;
+    sourceDomain: string;
+    category: string;
+    progress: number;
+    readTime: number;
+    date: string;
+  }>;
+  articlesAddedDates: string[];
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [ingestUrl, setIngestUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [ingestError, setIngestError] = useState<string | null>(null);
 
-  // Mock dashboard analytical data
-  const stats = {
-    articlesRead: 14,
-    readingTime: 185, // in minutes
-    streak: 6,
-    vocabularyCount: 38,
-    conceptsCount: 12
-  };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+        const res = await fetch("http://localhost:3001/api/v1/articles/dashboard/stats", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
+          throw new Error(`Server returned status: ${res.status}`);
+        }
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        console.error(err);
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
-  const categories = [
-    { name: "Frontend Development", count: 6, percentage: "42%", color: "bg-violet-500" },
-    { name: "System Design & Architecture", count: 4, percentage: "28%", color: "bg-cyan-500" },
-    { name: "DevOps & Cloud Systems", count: 3, percentage: "21%", color: "bg-emerald-500" },
-    { name: "AI & Vector Pipelines", count: 1, percentage: "9%", color: "bg-amber-500" }
-  ];
-
-  const recentArticles = [
-    {
-      id: "mock-article-uuid",
-      title: "React 19 Server Components Explained",
-      sourceDomain: "nextjs.org",
-      category: "Frontend Dev",
-      progress: 85,
-      readTime: 5,
-      date: "Today"
-    },
-    {
-      id: "redis-caching-uuid",
-      title: "Building High-Throughput Job Queues with Redis and BullMQ",
-      sourceDomain: "dev.to",
-      category: "System Design",
-      progress: 100,
-      readTime: 12,
-      date: "Yesterday"
-    },
-    {
-      id: "docker-multistage-uuid",
-      title: "Optimizing Docker Images for Next.js Deployments",
-      sourceDomain: "medium.engineering",
-      category: "DevOps",
-      progress: 30,
-      readTime: 8,
-      date: "3 days ago"
-    }
-  ];
-
-  // Helper for generating reading contribution grid (mocking the last 15 weeks)
-  const contributionWeeks = Array.from({ length: 22 }, () => {
-    return Array.from({ length: 7 }, (_, dIndex) => {
-      // Create random reading intensity: 0 (none), 1 (light), 2 (medium), 3 (heavy)
-      const val = Math.floor(Math.random() * 4);
-      return {
-        level: val === 3 && Math.random() > 0.4 ? 2 : val,
-        day: dIndex
-      };
-    });
-  });
-
-  const handleIngest = (e: React.FormEvent) => {
+  const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ingestUrl.trim()) return;
     setIsSubmitting(true);
-    
-    // Simulate ingestion trigger, then route
-    setTimeout(() => {
+    setIngestError(null);
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
+      const res = await fetch("http://localhost:3001/api/v1/articles/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : ""
+        },
+        body: JSON.stringify({ url: ingestUrl })
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Unauthorized. Please configure 'auth_token' in localStorage.");
+        }
+        throw new Error(`Ingest failed: ${res.statusText}`);
+      }
+
+      const article = await res.json();
+      router.push(`/articles/${article.id}`);
+    } catch (err) {
+      console.error(err);
+      setIngestError((err as Error).message);
+    } finally {
       setIsSubmitting(false);
-      router.push("/articles/mock-article-uuid");
-    }, 1500);
+    }
   };
+
+  const getContributionGrid = (dates: string[]) => {
+    const grid: Array<Array<{ level: number; day: number }>> = [];
+    const dateMap = new Map<string, number>();
+
+    dates.forEach(d => {
+      const formatted = new Date(d).toISOString().split("T")[0];
+      dateMap.set(formatted, (dateMap.get(formatted) ?? 0) + 1);
+    });
+
+    const now = new Date();
+    const startOffset = now.getDay(); // days since Sunday
+    const totalDays = 22 * 7;
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - totalDays + 1 - startOffset);
+
+    for (let w = 0; w < 22; w++) {
+      const week: Array<{ level: number; day: number }> = [];
+      for (let d = 0; d < 7; d++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + w * 7 + d);
+        const key = currentDate.toISOString().split("T")[0];
+        
+        const count = dateMap.get(key) ?? 0;
+        const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : 3;
+        
+        week.push({ level, day: d });
+      }
+      grid.push(week);
+    }
+    return grid;
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "Recent";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-400">
+        <div className="w-10 h-10 border-2 border-violet-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm">Loading dashboard insights...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-400 px-4">
+        <div className="glass-panel p-6 rounded-xl border border-red-900/50 max-w-md w-full text-center">
+          <p className="text-red-400 font-medium mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-all"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const colors = ["bg-violet-500", "bg-cyan-500", "bg-emerald-500", "bg-amber-500", "bg-pink-500"];
+  const totalArticles = data?.categories.reduce((acc, c) => acc + c.count, 0) || 1;
+  const categoriesList = data?.categories.map((cat, idx) => ({
+    name: cat.name,
+    count: cat.count,
+    percentage: `${Math.round((cat.count / totalArticles) * 100)}%`,
+    color: colors[idx % colors.length]
+  })) ?? [];
+
+  const contributionWeeks = data ? getContributionGrid(data.articlesAddedDates) : [];
+  const stats = data?.stats ?? { articlesRead: 0, readingTime: 0, streak: 0, vocabularyCount: 0, conceptsCount: 0 };
+  const recentArticles = data?.recentArticles ?? [];
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-100">
@@ -99,7 +200,7 @@ export default function Dashboard() {
         </nav>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-violet-400">
-            S
+            {data?.userName.substring(0, 1).toUpperCase()}
           </div>
         </div>
       </header>
@@ -110,28 +211,33 @@ export default function Dashboard() {
         {/* Top welcome & ingestion */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="font-outfit font-extrabold text-3xl text-white">Hi, Sora!</h1>
+            <h1 className="font-outfit font-extrabold text-3xl text-white">Hi, {data?.userName}!</h1>
             <p className="text-slate-400 text-sm mt-1">Ready to sync more knowledge into your developer second brain today?</p>
           </div>
           
-          <form onSubmit={handleIngest} className="flex gap-2 max-w-md w-full">
-            <input
-              type="url"
-              required
-              placeholder="Paste article URL to analyze..."
-              value={ingestUrl}
-              onChange={(e) => setIngestUrl(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-600 transition-all"
-            />
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 text-white text-sm font-medium flex items-center gap-1.5 transition-all whitespace-nowrap active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? "Ingesting..." : "Ingest"}</span>
-            </button>
-          </form>
+          <div className="flex flex-col gap-1 max-w-md w-full">
+            <form onSubmit={handleIngest} className="flex gap-2 w-full">
+              <input
+                type="url"
+                required
+                placeholder="Paste article URL to analyze..."
+                value={ingestUrl}
+                onChange={(e) => setIngestUrl(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-600 transition-all"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 text-white text-sm font-medium flex items-center gap-1.5 transition-all whitespace-nowrap active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isSubmitting ? "Ingesting..." : "Ingest"}</span>
+              </button>
+            </form>
+            {ingestError && (
+              <span className="text-xs text-red-500 font-medium px-1 mt-1">{ingestError}</span>
+            )}
+          </div>
         </div>
 
         {/* Analytics Card Grid */}
@@ -217,50 +323,56 @@ export default function Dashboard() {
               </a>
             </div>
 
-            <div className="flex flex-col gap-3">
-              {recentArticles.map((article) => (
-                <div 
-                  key={article.id}
-                  onClick={() => router.push(`/articles/${article.id}`)}
-                  className="glass-panel p-4 rounded-xl border border-slate-900 hover:border-slate-800 transition-all cursor-pointer flex justify-between items-center group"
-                >
-                  <div className="flex-1 min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
-                        {article.sourceDomain}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        {article.date}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-sm text-slate-100 group-hover:text-violet-400 transition-colors truncate">
-                      {article.title}
-                    </h3>
-                    
-                    {/* Read progress bar */}
-                    <div className="flex items-center gap-2 mt-3">
-                      <div className="h-1 bg-slate-900 rounded-full flex-1 max-w-[120px] overflow-hidden">
-                        <div 
-                          className="h-full bg-cyan-500" 
-                          style={{ width: `${article.progress}%` }}
-                        />
+            {recentArticles.length === 0 ? (
+              <div className="glass-panel p-8 rounded-xl border border-slate-900 text-center text-sm text-slate-500">
+                No articles analyzed yet. Paste a URL above to start!
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recentArticles.map((article) => (
+                  <div 
+                    key={article.id}
+                    onClick={() => router.push(`/articles/${article.id}`)}
+                    className="glass-panel p-4 rounded-xl border border-slate-900 hover:border-slate-800 transition-all cursor-pointer flex justify-between items-center group"
+                  >
+                    <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                          {article.sourceDomain}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {formatDate(article.date)}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {article.progress === 100 ? "Read" : `${article.progress}%`}
-                      </span>
-                      <span className="text-[10px] text-slate-600">•</span>
-                      <span className="text-[10px] text-slate-500">
-                        {article.readTime} min read
-                      </span>
+                      <h3 className="font-bold text-sm text-slate-100 group-hover:text-violet-400 transition-colors truncate">
+                        {article.title}
+                      </h3>
+                      
+                      {/* Read progress bar */}
+                      <div className="flex items-center gap-2 mt-3">
+                        <div className="h-1 bg-slate-900 rounded-full flex-1 max-w-[120px] overflow-hidden">
+                          <div 
+                            className="h-full bg-cyan-500" 
+                            style={{ width: `${article.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {article.progress === 100 ? "Read" : `${article.progress}%`}
+                        </span>
+                        <span className="text-[10px] text-slate-600">•</span>
+                        <span className="text-[10px] text-slate-500">
+                          {article.readTime} min read
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 group-hover:border-violet-500 group-hover:bg-violet-950/20 flex items-center justify-center transition-all">
+                      <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-violet-400" />
                     </div>
                   </div>
-                  
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 group-hover:border-violet-500 group-hover:bg-violet-950/20 flex items-center justify-center transition-all">
-                    <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-violet-400" />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Top Technologies breakdown */}
@@ -272,22 +384,26 @@ export default function Dashboard() {
 
             <div className="glass-panel p-5 rounded-xl border border-slate-900 flex flex-col gap-4">
               <h3 className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Top Categories Read</h3>
-              <div className="flex flex-col gap-4">
-                {categories.map((cat, idx) => (
-                  <div key={idx} className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-slate-300 truncate">{cat.name}</span>
-                      <span className="text-slate-400 font-mono">{cat.count} art.</span>
+              {categoriesList.length === 0 ? (
+                <div className="text-xs text-slate-500 text-center py-4">No data available</div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {categoriesList.map((cat, idx) => (
+                    <div key={idx} className="flex flex-col gap-1.5">
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-slate-300 truncate">{cat.name}</span>
+                        <span className="text-slate-400 font-mono">{cat.count} art.</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${cat.color}`} 
+                          style={{ width: cat.percentage }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full ${cat.color}`} 
-                        style={{ width: cat.percentage }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -373,4 +373,84 @@ export class ArticlesService {
       },
     });
   }
+
+  async getDashboardStats(userId: string) {
+    const user = await this.db.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const stats = await this.db.learningStatistic.findUnique({
+      where: { userId },
+    });
+
+    const vocabularyCount = await this.db.vocabulary.count({
+      where: {
+        article: { userId },
+      },
+    });
+
+    const conceptsCount = await this.db.technicalTerm.count({
+      where: {
+        article: { userId },
+      },
+    });
+
+    const recentArticles = await this.db.article.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: {
+        readingProgress: true,
+      },
+    });
+
+    const categoryGroup = await this.db.article.groupBy({
+      by: ["categoryName"],
+      where: { userId },
+      _count: {
+        id: true,
+      },
+    });
+
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - 154); // ~22 weeks
+
+    const articlesAdded = await this.db.article.findMany({
+      where: {
+        userId,
+        createdAt: {
+          gte: dateLimit,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    return {
+      userName: user?.name ?? "Developer",
+      stats: {
+        articlesRead: stats?.articlesRead ?? 0,
+        readingTime: stats?.totalReadingTime ?? 0,
+        streak: stats?.currentStreak ?? 0,
+        vocabularyCount,
+        conceptsCount,
+      },
+      categories: categoryGroup.map((g) => ({
+        name: g.categoryName || "Uncategorized",
+        count: g._count.id,
+      })),
+      recentArticles: recentArticles.map((a) => ({
+        id: a.id,
+        title: a.title,
+        sourceDomain: a.sourceDomain || "unknown",
+        category: a.categoryName || "Uncategorized",
+        progress: Math.round(a.readingProgress?.scrollPercentage ?? 0),
+        readTime: a.estimatedReadingTime,
+        date: a.createdAt,
+      })),
+      articlesAddedDates: articlesAdded.map((a) => a.createdAt),
+    };
+  }
 }

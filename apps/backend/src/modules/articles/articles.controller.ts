@@ -44,6 +44,11 @@ export class ArticlesController {
     return this.articlesService.findAll(userId, { page, limit, folderId, search });
   }
 
+  @Get("dashboard/stats")
+  async getDashboardStats(@GetUser("id") userId: string) {
+    return this.articlesService.getDashboardStats(userId);
+  }
+
   @Get(":id")
   async findOne(@Param("id") id: string, @GetUser("id") userId: string) {
     return this.articlesService.findOne(id, userId);

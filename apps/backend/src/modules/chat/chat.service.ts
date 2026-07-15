@@ -12,7 +12,7 @@ export class ChatService {
     private readonly db: DatabaseService,
     private readonly vectorService: VectorService
   ) {
-    const apiKey = process.env.OPENAI_API_KEY || "placeholder-key";
+    const apiKey = process.env.OPENAI_API_KEY;
     this.openai = new OpenAI({ apiKey });
   }
 
@@ -131,30 +131,7 @@ INSTRUCTIONS:
     ];
 
     if (!process.env.OPENAI_API_KEY) {
-      // Offline fallback / mock responses
-      this.logger.warn("OPENAI_API_KEY not configured. Simulating streaming response.");
-      const mockReply = `This is a simulated AI response to your question: "${messageContent}". Since no \`OPENAI_API_KEY\` is configured in the environment, the vector search returned raw matches, but full LLM compilation was skipped. Check your \`.env\` setup!`;
-      
-      const words = mockReply.split(" ");
-      for (const word of words) {
-        if (onToken) {
-          onToken(word + " ");
-        }
-        await new Promise((r) => setTimeout(r, 40));
-      }
-
-      await this.db.aIChatMessage.create({
-        data: {
-          chatId,
-          role: "assistant",
-          content: mockReply,
-        },
-      });
-
-      if (onComplete) {
-        onComplete(mockReply);
-      }
-      return mockReply;
+      throw new Error("OPENAI_API_KEY environment variable is not configured. AI chat streaming is unavailable.");
     }
 
     // 4. Invoke streaming completion

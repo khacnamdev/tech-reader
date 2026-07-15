@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Brain, Globe, Search, Sparkles, BookOpenText } from "lucide-react";
 
@@ -8,61 +8,47 @@ export default function Home() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "crawling" | "analyzing" | "embedding" | "completed">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
     setStatus("crawling");
+    setError(null);
 
     try {
-      // API integration target: POST /api/v1/articles/ingest
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
       const response = await fetch("http://localhost:3001/api/v1/articles/ingest", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token-for-development" // Standard header
+          "Authorization": token ? `Bearer ${token}` : ""
         },
         body: JSON.stringify({ url })
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Unauthorized. Please configure a valid JWT token in localStorage as 'auth_token'.");
+        }
         throw new Error(`Server returned status: ${response.status}`);
       }
 
       const data = await response.json();
-      
-      // Simulate pipeline progression for premium visual feedback
-      setTimeout(() => {
-        setStatus("analyzing");
-        setTimeout(() => {
-          setStatus("embedding");
-          setTimeout(() => {
-            setStatus("completed");
-            setTimeout(() => {
-              // Redirect to article page
-              router.push(`/articles/${data.id}`);
-            }, 800);
-          }, 1500);
-        }, 1500);
-      }, 1200);
-
+      setStatus("completed");
+      router.push(`/articles/${data.id}`);
     } catch (err) {
       console.error(err);
-      // Fallback: If backend is offline/unreachable, simulate analysis with local mock data
-      setTimeout(() => {
-        setStatus("analyzing");
-        setTimeout(() => {
-          setStatus("embedding");
-          setTimeout(() => {
-            setStatus("completed");
-            setTimeout(() => {
-              // Route to a placeholder UUID for showcase
-              router.push(`/articles/mock-article-uuid`);
-            }, 800);
-          }, 1500);
-        }, 1500);
-      }, 1200);
+      setError((err as Error).message);
+      setStatus("idle");
     }
   };
 
@@ -113,23 +99,30 @@ export default function Home() {
         {/* Input Ingestion Form */}
         <div className="w-full max-w-2xl glass-panel p-6 rounded-2xl border border-slate-800/80 shadow-2xl mb-16">
           {status === "idle" ? (
-            <form onSubmit={handleIngest} className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="url"
-                required
-                placeholder="Paste engineering article URL (e.g. Next.js, Redis, Docker)..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all text-sm"
-              />
-              <button
-                type="submit"
-                className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-700/20 active:scale-95"
-              >
-                <span>Analyze</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
+            <div className="flex flex-col gap-3">
+              <form onSubmit={handleIngest} className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="url"
+                  required
+                  placeholder="Paste engineering article URL (e.g. Next.js, Redis, Docker)..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all text-sm"
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-700/20 active:scale-95"
+                >
+                  <span>Analyze</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+              {error && (
+                <div className="text-xs text-red-500 font-medium px-1 mt-1 text-center">
+                  {error}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col items-center py-4">
               {/* Spinner animation */}

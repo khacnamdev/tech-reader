@@ -21,7 +21,10 @@ export class AuthGuard implements CanActivate {
     }
 
     const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECRET || "super_secret_jwt_key_please_change_in_production";
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is not configured.");
+    }
 
     try {
       // Decode JWT token
@@ -29,8 +32,16 @@ export class AuthGuard implements CanActivate {
 
       // Extract user id and email
       const userId = decoded.sub;
-      const email = decoded.email || `${userId}@placeholder-user.com`;
-      const name = decoded.name || "Developer";
+      if (!userId) {
+        throw new UnauthorizedException("User ID (sub) is missing in the token");
+      }
+
+      const email = decoded.email;
+      if (!email) {
+        throw new UnauthorizedException("Email is missing in the token");
+      }
+
+      const name = decoded.name || "User";
 
       // Automatically upsert user profile and preferences in local DB on first request
       let user = await this.db.user.findUnique({

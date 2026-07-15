@@ -40,17 +40,15 @@ export class AIEnrichedService {
   private openai: OpenAI;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY || "placeholder-key";
+    const apiKey = process.env.OPENAI_API_KEY;
     this.openai = new OpenAI({ apiKey });
   }
 
   async enrichArticle(markdownContent: string, targetLanguage = "VI"): Promise<AIEnrichedData> {
     this.logger.log(`Initiating OpenAI article enrichment for target language: ${targetLanguage}`);
 
-    // If API key is empty/placeholder, return a mocked structure to avoid throwing errors during setup/offline dev
     if (!process.env.OPENAI_API_KEY) {
-      this.logger.warn("OPENAI_API_KEY is not set. Returning mock parsed data.");
-      return this.getMockEnrichedData(targetLanguage);
+      throw new Error("OPENAI_API_KEY environment variable is not configured. Article enrichment is unavailable.");
     }
 
     try {
@@ -151,49 +149,5 @@ CRITICAL RULES:
       this.logger.error(`Error querying OpenAI: ${(error as Error).message}`);
       throw new Error(`AI enrichment process failed: ${(error as Error).message}`);
     }
-  }
-
-  private getMockEnrichedData(_targetLanguage: string): AIEnrichedData {
-    return {
-      title: "React 19 Server Components Explained",
-      summary: "This article introduces the design patterns and optimizations behind React Server Components in React 19.",
-      translation: `React Server Components (RSC) là một tính năng mới nổi bật trong React 19. RSC cho phép chạy các component trực tiếp trên server thay vì tải JavaScript bundle xuống client. 
-      Bằng việc sử dụng RSC, thời gian tải trang ban đầu sẽ giảm đáng kể và cải thiện SEO do HTML được render sẵn từ server. Qúa trình Hydration trên client sẽ nhẹ hơn.`,
-      difficulty: "INTERMEDIATE",
-      estimated_reading_time: 5,
-      category: "Frontend Dev",
-      tags: ["React", "Next.js", "Server Components"],
-      key_points: [
-        "RSC executes exclusively on the backend, reducing client bundles.",
-        "Improves initial page loads and hydration performance.",
-        "Technical terminology like Hydration and Fiber are preserved in English."
-      ],
-      vocabulary: [
-        {
-          word: "mitigate",
-          definition: "make less severe, serious, or painful",
-          meaning: "giảm thiểu, giảm bớt",
-          pronunciation: "/ˈmɪt.ɪ.ɡeɪt/",
-          example: "We can use caching to mitigate network latency issues.",
-          when_to_use: "When discussing software optimizations or risk management.",
-          difficulty: "INTERMEDIATE"
-        }
-      ],
-      tech_terms: [
-        {
-          term: "Hydration",
-          definition: "The process of attaching event listeners to static server-rendered HTML on the client side.",
-          why_it_exists: "To make static pages interactive after fast HTML load from backend.",
-          how_it_works: "React walks the server-rendered DOM nodes and attaches React event handlers to make them alive.",
-          architecture_desc: "Runs after client bundles load, matching the virtual tree with the actual DOM nodes.",
-          advantages: ["Fast initial visual load", "Improves SEO"],
-          disadvantages: ["Can cause hydration mismatch errors if server HTML doesn't match client state", "Blocks CPU during bootup"],
-          real_world_examples: ["Next.js App Router default page loading"],
-          related_tech: ["Server-Side Rendering (SSR)", "Suspense"],
-          best_practices: ["Avoid direct window/document references inside rendering lifecycle before mounts"],
-          common_mistakes: ["Using dynamic dates or local state conditional classes directly in SSR elements"]
-        }
-      ]
-    };
   }
 }

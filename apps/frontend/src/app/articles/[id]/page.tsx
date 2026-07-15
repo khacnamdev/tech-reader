@@ -61,101 +61,39 @@ export default function ArticleReader() {
   ]);
   const [query, setQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Load mock data if API fails / offline
-  const getMockArticle = (): ArticleData => ({
-    id: "mock-article-uuid",
-    title: "React 19 Server Components Explained",
-    author: "Dan Abramov",
-    sourceDomain: "react.dev",
-    sourceUrl: "https://react.dev/blog/server-components",
-    summary: "This article introduces the design patterns and optimizations behind React Server Components in React 19.",
-    difficulty: "INTERMEDIATE",
-    estimatedReadingTime: 5,
-    cleanMarkdown: `React Server Components (RSC) represent a paradigm shift in how we build React applications. By executing rendering code strictly on the server, RSC allows us to build fast, rich, and highly interactive user interfaces without shipping massive JavaScript bundles to the browser client.
-
-Key advantages include direct backend integration (query databases or read files inside components) and automatic code splitting. However, components using client state (useState, useEffect) must be demarcated with the "use client" directive. This splits the execution boundary clearly.`,
-    translationMarkdown: `React Server Components (RSC) đại diện cho một bước chuyển đổi mô hình trong cách chúng ta xây dựng ứng dụng React. Bằng việc thực thi mã render hoàn toàn trên server, RSC cho phép chúng ta xây dựng giao diện người dùng nhanh, phong phú và tính tương tác cao mà không cần gửi các gói JavaScript bundle khổng lồ tới trình duyệt client.
-
-Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (truy vấn cơ sở dữ liệu hoặc đọc file ngay trong component) và tự động phân tách code (code splitting). Tuy nhiên, các component sử dụng client state (useState, useEffect) phải được đánh dấu rõ ràng bằng chỉ thị "use client". Điều này giúp phân định ranh giới thực thi một cách rõ ràng.`,
-    keyPoints: [
-      "RSC runs strictly on the server to prevent massive client bundle downloads.",
-      "Direct backend integrations (database, files) inside component definitions.",
-      "Clear demarcation of client execution zones via 'use client' headers."
-    ],
-    vocabularies: [
-      {
-        word: "mitigate",
-        definition: "to make something less severe, harmful, or painful",
-        meaning: "giảm thiểu, giảm bớt tác động",
-        pronunciation: "/ˈmɪt.ɪ.ɡeɪt/",
-        exampleSentence: "We can use caching to mitigate network latency issues.",
-        whenToUse: "Used in discussions about performance optimizations or risk analysis.",
-        difficulty: "INTERMEDIATE",
-        isMastered: false
-      },
-      {
-        word: "demarcate",
-        definition: "set the boundaries or limits of something",
-        meaning: "phân định ranh giới, giới hạn",
-        pronunciation: "/ˈdiː.mɑːr.keɪt/",
-        exampleSentence: "The 'use client' directive is used to demarcate client components from server components.",
-        whenToUse: "Used when establishing separation of concerns in system design.",
-        difficulty: "ADVANCED",
-        isMastered: false
-      }
-    ],
-    technicalTerms: [
-      {
-        term: "Hydration",
-        definition: "The client-side process where React attaches event listeners to the static HTML sent by the server, making the page interactive.",
-        whyItExists: "To provide immediate visual layout (SSR) while preserving full interactive functionality once React bundles boot up.",
-        howItWorks: "React parses the server-rendered DOM nodes and attaches matching React events to bind virtual logic to the live DOM.",
-        architectureDesc: "Occurs during client bootup. React compares the server-rendered HTML tree against the compiled virtual DOM tree to sync state.",
-        advantages: [
-          "Fast initial visual load",
-          "Excellent SEO crawlability"
-        ],
-        disadvantages: [
-          "Causes hydration mismatch errors if SSR state doesn't match client state",
-          "Can block browser main thread during large component trees parsing"
-        ],
-        realWorldExamples: [
-          "Next.js App Router default page loading lifecycle"
-        ],
-        relatedTech: [
-          "Server-Side Rendering (SSR)",
-          "Suspense"
-        ],
-        bestPractices: [
-          "Do not reference browser-only objects (window, document) inside component render blocks before useEffect triggers."
-        ],
-        commonMistakes: [
-          "Using conditional classes based on local storage configurations directly in SSR rendering outputs."
-        ]
-      }
-    ],
-    notes: "RSC is highly beneficial for static databases parsing. Remind team to avoid importing server-only packages (like fs) in client boundaries!"
-  });
 
   useEffect(() => {
     const fetchArticle = async () => {
       try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
+        if (!token) {
+          router.push("/login");
+          return;
+        }
         const res = await fetch(`http://localhost:3001/api/v1/articles/${articleId}`, {
           headers: {
-            "Authorization": "Bearer mock-token-for-development"
+            "Authorization": `Bearer ${token}`
           }
         });
-        if (!res.ok) throw new Error("API Offline");
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
+          throw new Error(`Server returned status: ${res.status}`);
+        }
         const data = await res.json();
         setArticle(data);
         setNotesText(data.notes || "");
       } catch (err) {
-        // Fallback to mock data
-        const mock = getMockArticle();
-        setArticle(mock);
-        setNotesText(mock.notes || "");
+        console.error(err);
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -168,17 +106,21 @@ Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (t
 
   const handleSaveNotes = async () => {
     try {
-      await fetch(`http://localhost:3001/api/v1/articles/${articleId}/notes`, {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
+      const res = await fetch(`http://localhost:3001/api/v1/articles/${articleId}/notes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token-for-development"
+          "Authorization": token ? `Bearer ${token}` : ""
         },
         body: JSON.stringify({ content: notesText })
       });
+      if (!res.ok) {
+        throw new Error(`Failed to save notes: ${res.statusText}`);
+      }
       alert("Notes saved successfully!");
     } catch (err) {
-      alert("Offline Mode: Notes cached locally in browser.");
+      alert(`Error saving notes: ${(err as Error).message}`);
     }
   };
 
@@ -192,16 +134,38 @@ Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (t
     setIsTyping(true);
 
     try {
-      const res = await fetch(`http://localhost:3001/api/v1/chat/sessions/mock-session-id/stream`, {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : "";
+      let sessionId = activeChatSessionId;
+
+      if (!sessionId) {
+        const sessionRes = await fetch("http://localhost:3001/api/v1/chat/sessions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+          },
+          body: JSON.stringify({ title: `Discussion on ${article?.title || "Article"}` })
+        });
+
+        if (!sessionRes.ok) {
+          throw new Error(`Failed to initialize chat session: ${sessionRes.statusText}`);
+        }
+
+        const sessionData = await sessionRes.json();
+        sessionId = sessionData.id;
+        setActiveChatSessionId(sessionId);
+      }
+
+      const res = await fetch(`http://localhost:3001/api/v1/chat/sessions/${sessionId}/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token-for-development"
+          "Authorization": token ? `Bearer ${token}` : ""
         },
         body: JSON.stringify({ message: userMsg, articleId })
       });
 
-      if (!res.ok) throw new Error("Chat api unreachable");
+      if (!res.ok) throw new Error(`Chat API error: ${res.statusText}`);
       
       setIsTyping(false);
       const reader = res.body?.getReader();
@@ -214,7 +178,6 @@ Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (t
         const chunk = await reader?.read();
         if (chunk?.done) break;
         const text = decoder.decode(chunk?.value);
-        // Process SSE lines
         const lines = text.split("\n").filter(line => line.trim());
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -237,12 +200,8 @@ Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (t
         }
       }
     } catch (err) {
-      // Mock streaming fallback
-      setTimeout(() => {
-        setIsTyping(false);
-        const reply = `Mock AI reply for: "${userMsg}". (OpenAI integration will query pgvector chunks for '${article?.title}' to synthesize an answer here).`;
-        setChatMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      }, 1000);
+      setIsTyping(false);
+      setChatMessages(prev => [...prev, { role: "assistant", content: `Error: ${(err as Error).message}` }]);
     }
   };
 
@@ -255,13 +214,37 @@ Các lợi thế cốt lõi bao gồm tích hợp trực tiếp với backend (t
     }
   };
 
-  if (!article) {
+  if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-950 text-slate-400">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
           <span>Synchronizing technical knowledge...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-grow flex flex-col items-center justify-center bg-slate-950 text-slate-400 px-4">
+        <div className="glass-panel p-6 rounded-xl border border-red-900/50 max-w-md w-full text-center">
+          <p className="text-red-400 font-medium mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-all"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!article) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-950 text-slate-400">
+        <p className="text-sm">Article not found.</p>
       </div>
     );
   }
