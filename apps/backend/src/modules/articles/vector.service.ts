@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { DatabaseService } from "../../database/database.service";
 import * as crypto from "crypto";
 
@@ -14,28 +14,41 @@ export interface SimilarChunk {
 @Injectable()
 export class VectorService {
   private readonly logger = new Logger(VectorService.name);
-  private openai: OpenAI;
+  private ai: GoogleGenAI;
 
   constructor(private readonly db: DatabaseService) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    this.openai = new OpenAI({ apiKey });
+    const apiKey = process.env.GEMINI_API_KEY;
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
   /**
-   * Generates a 1536-dimension embedding using OpenAI's text-embedding-3-small model.
+   * Generates a 3072-dimension embedding using Google's gemini-embedding-2 model.
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY environment variable is not configured. Vector embedding generation is unavailable.");
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY environment variable is not configured. Vector embedding generation is unavailable.");
     }
 
     try {
-      const response = await this.openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: text,
+      const response = await this.ai.models.embedContent({
+        model: "gemini-embedding-2",
+        contents: text,
       });
 
-      return response.data[0].embedding;
+      let values: number[] | undefined;
+      
+      if ("embedding" in response && response.embedding) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        values = (response.embedding as any).values;
+      } else if (response.embeddings && response.embeddings.length > 0) {
+        values = response.embeddings[0].values;
+      }
+
+      if (!values) {
+        throw new Error("Failed to extract embedding values from response");
+      }
+
+      return values;
     } catch (error) {
       this.logger.error(`Failed to generate embedding: ${(error as Error).message}`);
       throw new Error(`Embedding generation error: ${(error as Error).message}`);

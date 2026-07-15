@@ -31,6 +31,13 @@ interface TechTerm {
   commonMistakes: string[];
 }
 
+interface KeyPoint {
+  id: string;
+  articleId: string;
+  point: string;
+  createdAt: string;
+}
+
 interface ArticleData {
   id: string;
   title: string;
@@ -42,7 +49,7 @@ interface ArticleData {
   estimatedReadingTime: number;
   cleanMarkdown: string;
   translationMarkdown: string;
-  keyPoints: string[];
+  keyPoints: KeyPoint[];
   vocabularies: Vocabulary[];
   technicalTerms: TechTerm[];
   notes?: string;
@@ -320,12 +327,12 @@ export default function ArticleReader() {
                 <div>
                   <h3 className="font-outfit font-bold text-lg text-white mb-3">Key Takeaways</h3>
                   <ul className="space-y-3">
-                    {article.keyPoints.map((point, idx) => (
+                    {article.keyPoints.map((kp, idx) => (
                       <li key={idx} className="flex gap-3 text-sm text-slate-300 items-start">
                         <div className="w-5 h-5 rounded-full bg-violet-950/60 border border-violet-800/30 flex items-center justify-center text-[10px] font-bold text-violet-400 flex-shrink-0 mt-0.5">
                           {idx + 1}
                         </div>
-                        <span className="leading-relaxed">{point}</span>
+                        <span className="leading-relaxed">{kp.point}</span>
                       </li>
                     ))}
                   </ul>
